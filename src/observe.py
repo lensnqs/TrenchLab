@@ -22,6 +22,10 @@ DEX = "https://api.dexscreener.com/tokens/v1/solana"
 RUG = "https://api.rugcheck.xyz/v1/tokens"
 RPC = "https://api.mainnet-beta.solana.com"
 STREAM = "wss://stream.pumpapi.io/"  # third-party free stream; not PumpPortal
+TIME_PRIORITY_MAX_EVENTS = 1_000_000
+TIME_PRIORITY_MESSAGE_BYTES = 64 * 1024
+TIME_PRIORITY_TOTAL_BYTES = 256 * 1024 * 1024
+MAX_TRACKED_MINTS = 1024
 _BASE58 = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 
 
@@ -80,9 +84,13 @@ class ObservationConfig:
     max_events: int = 15000
     request_timeout_s: int = 12
     rpc_url: str = RPC
+    time_priority: bool = False
 
     def validate_capture(self):
-        for name, maximum in (("duration_s", 180), ("max_events", 15000), ("max_migrations", 10)):
+        if type(self.time_priority) is not bool:
+            raise ValueError("time_priority must be boolean")
+        event_max = TIME_PRIORITY_MAX_EVENTS if self.time_priority else 15000
+        for name, maximum in (("duration_s", 180), ("max_events", event_max), ("max_migrations", 10)):
             value = getattr(self, name)
             if type(value) is not int or not 1 <= value <= maximum:
                 raise ValueError(f"{name} must be an integer from 1 to {maximum}")
@@ -256,8 +264,9 @@ def evaluate_mint(migration: dict, raw_migration: Any, out: Path, db,
 async def capture_migrations(cfg: ObservationConfig, out: Path) -> tuple[list[tuple[dict,dict]], dict]:
     """One bounded connection, no subscription guesses, no retries or trading.
 
-    `migrations` counts legacy parser matches, never independently proven events.
-    Every frame contributes to diagnostics, even when the parser rejects it.
+    Time-priority mode is diagnostics only: no raw candidate retention and no
+    early stop when claim/sample slots fill. Distinct mint tracking is bounded;
+    overflow is explicit, never misrepresented as an exact unique count.
     """
     import websockets
     cfg.validate_capture()
@@ -265,45 +274,105 @@ async def capture_migrations(cfg: ObservationConfig, out: Path) -> tuple[list[tu
     migrations: list[tuple[dict,dict]] = []
     seen: set[str] = set()
     count = 0
+    received_bytes = 0
+    claim_frames = 0
+    dedup_overflow = 0
     status = {"connected":False, "events_seen":0, "migrations":0, "reason":None, "stream":STREAM,
               "schema_status": "UNVALIDATED", "independent_migration_proof": "UNKNOWN",
               "error": None}
+    status["capture_limits"] = {"max_events": cfg.max_events,
+        "message_bytes": TIME_PRIORITY_MESSAGE_BYTES if cfg.time_priority else 1_500_000,
+        "total_decoded_bytes": TIME_PRIORITY_TOTAL_BYTES if cfg.time_priority else None,
+        "tracked_mints": MAX_TRACKED_MINTS,
+        "claim_goal_stops_capture": not cfg.time_priority,
+        "raw_candidates_retained": not cfg.time_priority}
     evidence = StreamEvidence(STREAM, utcnow())
-    deadline = time.monotonic() + cfg.duration_s
+    started = time.monotonic()
+    connected_start = None
+    listening_end = None
+    open_timeout = min(12, cfg.duration_s)
+    total_timeout = cfg.duration_s + open_timeout + 1 if cfg.time_priority else cfg.duration_s
+    bins = [{"offset_s": i, "events": 0, "migration_claim_frames": 0}
+            for i in range(0, cfg.duration_s, 10)] if cfg.time_priority else []
     try:
-        async with asyncio.timeout(cfg.duration_s):
-            async with websockets.connect(STREAM, open_timeout=min(12, cfg.duration_s), close_timeout=1,
-                                          max_size=1_500_000, max_queue=16, ping_interval=20) as ws:
+        async with asyncio.timeout(total_timeout):
+            options = {"max_size": TIME_PRIORITY_MESSAGE_BYTES, "max_queue": 4,
+                       "compression": None} if cfg.time_priority else {"max_size": 1_500_000, "max_queue": 16}
+            async with websockets.connect(STREAM, open_timeout=open_timeout, close_timeout=1,
+                                          ping_interval=20, **options) as ws:
                 status["connected"] = True
-                while count < cfg.max_events and len(migrations) < cfg.max_migrations:
-                    msg = await asyncio.wait_for(ws.recv(), timeout=max(0.001, deadline - time.monotonic()))
-                    count += 1
-                    data = None
-                    migration = None
-                    try:
-                        data = json.loads(msg)
-                    except (ValueError, TypeError, RecursionError):
-                        outcome = "invalid_json"
-                    else:
-                        migration = migration_from_event(data)
-                        if not isinstance(data, dict):
-                            outcome = "non_object"
-                        elif data.get("action") != "migrate":
-                            outcome = "not_legacy_migrate_action"
-                        elif migration is None:
-                            outcome = "invalid_mint"
-                        elif migration["mint"] in seen:
-                            outcome = "duplicate_mint"
+                connected_start = time.monotonic()
+                deadline = (connected_start if cfg.time_priority else started) + cfg.duration_s
+                try:
+                    while True:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            status["reason"] = "time_limit"
+                            break
+                        try:
+                            msg = await asyncio.wait_for(ws.recv(), timeout=remaining)
+                        except TimeoutError:
+                            if time.monotonic() < deadline:
+                                raise
+                            status["reason"] = "time_limit"
+                            break
+                        observed_at = utcnow()
+                        count += 1
+                        received_bytes += len(msg.encode("utf-8") if isinstance(msg, str) else msg)
+                        time_bin = bins[min(len(bins) - 1, int((time.monotonic() - connected_start) // 10))] if bins else None
+                        if time_bin is not None:
+                            time_bin["events"] += 1
+                        data = None
+                        migration = None
+                        if cfg.time_priority and received_bytes > TIME_PRIORITY_TOTAL_BYTES:
+                            outcome = "byte_budget_exceeded"
                         else:
-                            outcome = "legacy_parser_match_unvalidated"
-                            seen.add(migration["mint"])
-                            migrations.append((migration, data))
-                    evidence.observe(msg, data, outcome, utcnow())
-                status["reason"] = ("sample_goal" if len(migrations) == cfg.max_migrations else "event_limit")
+                            try:
+                                data = json.loads(msg)
+                            except (ValueError, TypeError, RecursionError):
+                                outcome = "invalid_json"
+                            else:
+                                migration = migration_from_event(data)
+                                if not isinstance(data, dict):
+                                    outcome = "non_object"
+                                elif data.get("action") != "migrate":
+                                    outcome = "not_legacy_migrate_action"
+                                elif migration is None:
+                                    outcome = "invalid_mint"
+                                else:
+                                    claim_frames += 1
+                                    if time_bin is not None:
+                                        time_bin["migration_claim_frames"] += 1
+                                    if migration["mint"] in seen:
+                                        outcome = "duplicate_mint"
+                                    elif len(seen) >= MAX_TRACKED_MINTS:
+                                        dedup_overflow += 1
+                                        outcome = "migration_claim_dedup_overflow"
+                                    else:
+                                        outcome = "legacy_parser_match_unvalidated"
+                                        seen.add(migration["mint"])
+                                        if not cfg.time_priority:
+                                            migrations.append((migration, data))
+                        evidence.observe(msg, data, outcome, observed_at)
+                        if cfg.time_priority and received_bytes >= TIME_PRIORITY_TOTAL_BYTES:
+                            status["reason"] = "byte_limit"
+                            break
+                        if not cfg.time_priority and len(migrations) >= cfg.max_migrations:
+                            status["reason"] = "sample_goal"
+                            break
+                        if count >= cfg.max_events:
+                            status["reason"] = "event_limit"
+                            break
+                finally:
+                    listening_end = time.monotonic()
     except TimeoutError:
-        status["reason"] = "time_limit" if status["connected"] else "stream_error"
-        if not status["connected"]:
-            status["error"] = {"category": "connection_timeout", "exception_type": "TimeoutError"}
+        if status["connected"] and status["reason"] is None and time.monotonic() >= deadline:
+            status["reason"] = "time_limit"
+        else:
+            category = ("close_timeout" if status["reason"] is not None else
+                        "receive_timeout" if status["connected"] else "connection_timeout")
+            status["reason"] = "stream_error"
+            status["error"] = {"category": category, "exception_type": "TimeoutError"}
     except Exception as exc:
         # Never persist exception text: it may contain URLs, headers or credentials.
         response = getattr(exc, "response", None)
@@ -315,8 +384,20 @@ async def capture_migrations(cfg: ObservationConfig, out: Path) -> tuple[list[tu
         status["error"] = {"category": category, "exception_type": type(exc).__name__,
                            "http_status": code if isinstance(code, int) else None}
     status["events_seen"] = count
-    status["migrations"] = len(migrations)
-    status["legacy_parser_matches"] = len(migrations)
+    status["migrations"] = len(seen)
+    status["legacy_parser_matches"] = len(seen)
+    status["migration_claim_frames"] = claim_frames
+    status["distinct_mint_count_complete"] = dedup_overflow == 0
+    status["dedup_overflow_frames"] = dedup_overflow
+    status["received_message_bytes"] = received_bytes
+    status["time_priority"] = cfg.time_priority
+    status["elapsed_s"] = round(time.monotonic() - started, 6)
+    status["connected_observation_s"] = round((listening_end - connected_start)
+        if listening_end is not None and connected_start is not None else 0, 6)
+    status["duration_target_s"] = cfg.duration_s
+    status["coverage"] = ("DURATION_REACHED" if status["reason"] == "time_limit"
+                          and status["connected_observation_s"] >= cfg.duration_s else "TRUNCATED")
+    status["time_bins"] = bins
     status["parser_outcomes"] = dict(evidence.outcomes)
     status["evidence"] = evidence.write(out, utcnow(), status)
     return migrations, status

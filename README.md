@@ -51,9 +51,10 @@ Each run writes a unique `stream_evidence_*.json` plus `run_summary.json` in the
 chosen output directory. Use a new output directory to retain each run summary.
 Diagnostics cap samples at 20, two per top-level shape, with a 32 KiB compact
 serialized sample budget and 64 buckets per histogram (including overflow).
-Whole evidence files also contain bounded histograms and metadata. Messages
-remain capped at 1.5 MB, runs at 180 seconds / 15,000 frames / 10 unique legacy
-parser matches. Limits must be positive integers within those bounds.
+Whole evidence files also contain bounded histograms and metadata. Legacy capture
+remains capped at 1.5 MB per message, 180 seconds / 15,000 messages / 10 unique
+legacy parser matches. The time-priority diagnostic mode below uses different
+resource guards. Limits must be positive integers within their mode's bounds.
 
 Samples retain top-level key/type shapes, public address/signature fields, and
 plausible timestamp probe values verbatim. Other values are redacted; unknown
@@ -81,6 +82,22 @@ separate tests with synthetic identifiers from live delivery and on-chain proof.
 origin. The [proposed live procedure](docs/eng-002-live-validation-procedure.md)
 is for a separately authorized Stage B and has not been executed. Stage A changes
 no parser behavior or environment permissions; PR #2 remains unmerged.
+
+### ENG-002 readiness correction (PR #4)
+
+The [readiness report](docs/eng-002-readiness-correction.md) supersedes the initial
+500-message capture plan. `--capture-only --time-priority` targets 180 connected
+seconds and continues after sample/claim goals fill. Its one-million-message and
+256 MiB decoded-byte guards are emergency stops, not adequate-coverage claims.
+It retains no raw candidate payloads, bounds mint tracking at 1,024, records
+duration/stop reason and ten-second counts, and reports incomplete uniqueness
+after tracking overflow. Use the process guards in the proposed procedure too.
+
+Separate `migration_samples` retain at most eight distinct eligible message
+hashes within 16 KiB, independent of the 20-sample / 32 KiB general sampler. They
+include observation time, hash and a fixed provider-field projection with UNKNOWN
+states. Omission/repeat counters disclose saturation; no sampling completeness or
+on-chain proof is claimed. No Stage B capture is authorized by this change.
 
 ## Safety and limits
 

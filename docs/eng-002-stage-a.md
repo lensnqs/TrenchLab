@@ -1,5 +1,11 @@
 # ENG-002 — Stage A findings
 
+This is the accepted Stage A snapshot through commit
+`1fbee2c66a503e69e2d2b8601e875e74499b6d12`. The subsequent
+[readiness correction](eng-002-readiness-correction.md) documents the narrowly
+scoped diagnostic changes and supersedes the initial live-capture budgets; the
+Stage A test results and unchanged-runtime statement below describe that snapshot.
+
 Stage A covers documentation review, offline regression fixtures and a proposed
 bounded live procedure. **Stage B has not run.** No environment configuration or
 permission changes, paid resources, wallet access, orders, deployment or merge

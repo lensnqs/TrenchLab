@@ -75,8 +75,10 @@ for actual access evidence, mock-test results and remaining blockers.
 ORBIT's findings from the [official PumpApi stream documentation](https://pumpapi.io/stream)
 support the existing top-level `action: "migrate"` schema and no-subscription
 connection. [The Stage A report](docs/eng-002-stage-a.md) distinguishes those
-attributed findings and documentation-derived tests with synthetic identifiers
-from live delivery and on-chain proof. The [proposed live procedure](docs/eng-002-live-validation-procedure.md)
+attributed findings, the preserved `DOCS_EXAMPLE_NOT_LIVE_EVIDENCE` excerpt, and
+separate tests with synthetic identifiers from live delivery and on-chain proof.
+`createPool` is not migration, and `migrate` alone does not establish Pump.fun
+origin. The [proposed live procedure](docs/eng-002-live-validation-procedure.md)
 is for a separately authorized Stage B and has not been executed. Stage A changes
 no parser behavior or environment permissions; PR #2 remains unmerged.
 

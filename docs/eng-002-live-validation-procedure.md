@@ -11,6 +11,12 @@ and whether any provider migration claim matches the documented basic schema.
 It cannot independently prove an on-chain migration or explain the historical
 Colab result from a short sample. There is no paid or wallet-dependent fallback.
 
+The Stage A reference is the published excerpt supplied by ORBIT, retained in
+`fixtures/pumpapi_docs_example.json` as `DOCS_EXAMPLE_NOT_LIVE_EVIDENCE`. It was not
+captured from a live stream. Its `pool: "pump-amm"` / `poolCreatedBy: "pump"` describe
+that particular provider Pump.fun example; other launchpads also emit migration
+events. No generic `migrate` match establishes a Pump.fun graduation.
+
 | Required destination | Protocol / port | Scope |
 | --- | --- | --- |
 | `pumpapi.io` | HTTPS, TCP 443, `GET /stream` | Retrieve/reconfirm official documentation; at most one request, 20-second timeout, no automatic retries or redirects |
@@ -46,7 +52,11 @@ time and content hash of any successfully obtained page locally. Compare it with
 ORBIT's findings: all-events, no application subscription, top-level migrate/mint/
 poolId/signature. If the page disagrees or the contract is unclear, stop before
 connecting. Do not substitute PumpPortal documentation. Provider timestamp and
-heartbeat semantics must be quoted only if actually documented.
+heartbeat semantics must be quoted only if actually documented. The supplied
+example's original `timestamp: 1793204432648` and `block: 462541749` do not establish
+timestamp units, transaction success or authenticated chain inclusion. ORBIT
+reports that the accessible documentation leaves application heartbeat schema,
+ping interval, pong payload and timeout unspecified; keep those UNKNOWN.
 
 Run the offline regression suite first. Confirm the output directory is ignored
 and has adequate space. Do not print environment values or credential files.
@@ -75,6 +85,12 @@ a hard wire-traffic cap because protocol/control traffic is additional. The time
 and single-connection bounds apply. Any limit/resource termination makes the run
 incomplete; do not automatically repeat it or expand the budget. The below
 wrapper adds process guards without modifying application code.
+
+The docs recommend reconnection handling for ongoing consumers. This one-attempt
+diagnostic run deliberately records a drop and stops, retaining partial evidence;
+it does not attempt ongoing service availability. Any further connection requires
+a separately authorized experiment/budget, never simultaneous connections or an
+unbounded retry loop. No application heartbeat message is invented.
 
 ### Pending command — do not execute in Stage A
 
@@ -127,6 +143,15 @@ actual stopping reason and do not infer provider failure or fix the schema from
 absence alone. Mint deduplication is per run, not authenticated transaction-level
 deduplication. Protocol ping/pong is not an application message; an undocumented
 heartbeat payload must not be invented or treated as migration.
+
+Compare the exact `action` value: `createPool` is not `migrate`, even if other
+fields resemble the published example. Do not report all migration matches as
+Pump.fun graduations. The normalized parser record does not retain launchpad
+classification, and the sanitizer currently redacts pool-family/creator values;
+any run lacking reviewable origin evidence must report origin UNKNOWN. The
+supplied documentation example does not authorize weakening sanitation or adding
+a launchpad filter in this diagnostic run. A `burnedLiquidity` provider value is
+not a verified LP lock/burn or a token-safety certificate.
 
 Sanitized samples are limited to the first two messages of a top-level shape and
 20 overall. A later migration may increment counters without being retained as

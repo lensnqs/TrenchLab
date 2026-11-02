@@ -70,6 +70,16 @@ independently verified migrations. All evaluated candidates remain
 `UNVERIFIED_DO_NOT_TRADE`. See [the engineering report](docs/assignment-001-report.md)
 for actual access evidence, mock-test results and remaining blockers.
 
+### ENG-002 Stage A
+
+ORBIT's findings from the [official PumpApi stream documentation](https://pumpapi.io/stream)
+support the existing top-level `action: "migrate"` schema and no-subscription
+connection. [The Stage A report](docs/eng-002-stage-a.md) distinguishes those
+attributed findings and documentation-derived tests with synthetic identifiers
+from live delivery and on-chain proof. The [proposed live procedure](docs/eng-002-live-validation-procedure.md)
+is for a separately authorized Stage B and has not been executed. Stage A changes
+no parser behavior or environment permissions; PR #2 remains unmerged.
+
 ## Safety and limits
 
 No live orders, wallet keys, transaction signing, FOMO signup, referral dependency, trading advice, paid API, or automated trading. Synthetic paper results are *not* a backtest or evidence of profitability. Partial token-security observations are not a safety certification. Any missing evidence blocks clearance. Never commit credentials or licensed/raw personal data.

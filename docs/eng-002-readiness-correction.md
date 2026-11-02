@@ -112,9 +112,12 @@ a worst-case memory proof or a guarantee that adversarial traffic avoids aborts.
 ## Delivery and stopping point
 
 The revised [live procedure](eng-002-live-validation-procedure.md) is proposed
-only. PR #4 is updated through its existing branch, preserving PR #2 and main.
-The PR API restriction prevents direct metadata/body editing; the committed
-report carries the revised scope, limits and evidence. No network settings were
-changed to bypass that restriction. Review remaining authorization/connectivity,
+only. Implementation commit `d76f085f8cdab78fc4f1b0149f48bf187e7d0f10` was pushed
+to PR #4's existing branch, preserving PR #2 and main. The title/body PATCH request
+to `https://api.github.com/repos/lensnqs/TrenchLab/pulls/4` returned `Forbidden`;
+**the PR's code is updated, but no title/body edit is claimed**. The prepared
+description is retained at `/workspace/trenchlab-pr4-body.md`; the committed report
+carries the revised scope, limits and evidence. No network settings were changed
+to bypass that restriction. Review remaining authorization/connectivity,
 resource-termination and sampling limitations before any separately authorized
 Stage B. Stop for ORBIT review.

@@ -95,6 +95,11 @@ explicitly synthetic and must never be cited as provider schema evidence.
   remain `UNVERIFIED_DO_NOT_TRADE` even if every audit layer is marked PASS.
 - README documents limits, probes, output semantics and reproducible commands.
 
+Changed tracked files: `README.md`, `run_live.py`, `src/observe.py`,
+`src/stream_evidence.py`, `tests/test_stream_evidence.py`,
+`fixtures/stream_diagnostic_mocks.json`, `docs/assignment-001-report.md`, and
+`docs/evidence/stream-access-denied.json`.
+
 Samples are limited to 20, two per shape, with a 32 KiB compact serialized sample
 budget. Each histogram has at most 64 buckets including overflow. Values are
 redacted except for selected public identifiers, plausible time probes and a
@@ -164,10 +169,28 @@ AC-04 keeps the unvalidated predicate unchanged and adds fail-closed labels.
 AC-06 preserves available provenance with explicit time/schema limitations.
 AC-02 contains the source-code comparison and honest absence of provider evidence;
 provider schema verification remains blocked. AC-07 is Outcome B, not Outcome A.
-AC-08 requires a draft PR or the expressly authorized local-patch fallback if
-GitHub writing is blocked. Git push dry-run succeeded; PR API access was forbidden.
-The final delivery records the actual branch push and PR-creation results and
-the resulting commit SHA; no PR is claimed without a returned GitHub PR URL.
+AC-08 uses the expressly authorized local-patch fallback: Git push succeeded but
+`POST https://api.github.com/repos/lensnqs/TrenchLab/pulls` returned `Forbidden`.
+**No draft PR exists.** The request explicitly specified `draft: true`, head
+`fix/issue-1-migration-evidence`, base `main`; no merge was attempted.
+
+Implementation commit `0547a037a58baff89adc216f0b0aa92fd63bbe0f` was published to
+the dedicated branch. The subsequent report-only commit records this delivery
+result; its full SHA is included in the final delivery. A complete baseline-to-
+delivery patch and ready-to-submit draft PR body are retained outside the checkout
+at `/workspace/trenchlab-issue-1.patch` and `/workspace/trenchlab-pr-body.md`.
+After GitHub API access is restored, the prepared JSON payload at
+`/workspace/trenchlab-pr.json` can be submitted with:
+
+```sh
+gh api --method POST repos/lensnqs/TrenchLab/pulls --input /workspace/trenchlab-pr.json
+```
+
+Reusable `install_script` and `start_skill` contents were saved in the environment
+draft after the full install/test/demo script was executed successfully and
+repeatably. The draft also retains the three network additions. No background
+service is required. Offline/mock development is validated; live source access,
+publication, and restoration in a fresh task are not validated.
 
 Stop for ORBIT review. No merge, deployment, spending or claim of authenticated
 migration behavior is authorized by these offline tests.

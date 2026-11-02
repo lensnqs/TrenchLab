@@ -1,0 +1,14 @@
+{
+  "data_kind": "SYNTHETIC_DIAGNOSTIC_MOCKS_NOT_PROVIDER_EVIDENCE",
+  "purpose": "Exercise rejection diagnostics; these are not claimed PumpApi schemas.",
+  "frames": [
+    "not JSON; secret text must not be logged",
+    "[]",
+    "null",
+    "{}",
+    "{\"action\":\"buy\",\"apiKey\":\"SECRET_SENTINEL\"}",
+    "{\"action\":\"migrate\"}",
+    "{\"action\":\"migrate\",\"mint\":\"bad\"}",
+    "{\"type\":\"opaque_message\",\"data\":{\"token\":\"SECRET_SENTINEL\"}}"
+  ]
+}

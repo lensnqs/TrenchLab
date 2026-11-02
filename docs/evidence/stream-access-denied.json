@@ -1,0 +1,40 @@
+{
+  "evidence_kind": "SANITIZED_STREAM_DIAGNOSTICS",
+  "stream": "wss://stream.pumpapi.io/",
+  "started_at": "2026-11-02T18:15:08.229044+00:00",
+  "ended_at": "2026-11-02T18:15:08.418379+00:00",
+  "subscription": {
+    "messages_sent": 0,
+    "schema_status": "UNVALIDATED"
+  },
+  "schema_status": "UNVALIDATED",
+  "independent_migration_proof": "UNKNOWN",
+  "provider_timestamp_semantics": "UNKNOWN; time probes retained verbatim when present",
+  "events_seen": 0,
+  "parser_outcomes": {},
+  "event_type_probes": {},
+  "top_level_shapes": {},
+  "limits": {
+    "samples": 20,
+    "sample_bytes": 32768,
+    "counter_keys": 64,
+    "samples_per_shape": 2
+  },
+  "samples": [],
+  "capture_status": {
+    "connected": false,
+    "events_seen": 0,
+    "migrations": 0,
+    "reason": "stream_error",
+    "stream": "wss://stream.pumpapi.io/",
+    "schema_status": "UNVALIDATED",
+    "independent_migration_proof": "UNKNOWN",
+    "error": {
+      "category": "http_rejected",
+      "exception_type": "InvalidProxyStatus",
+      "http_status": 403
+    },
+    "parser_outcomes": {}
+  },
+  "hash_note": "wire_sha256 hashes original frames; file hash covers sanitized JSON"
+}

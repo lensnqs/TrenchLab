@@ -1,0 +1,18 @@
+{
+  "migration": {
+    "signature": "fake_signature_for_unit_test_only",
+    "action": "migrate",
+    "poolId": "HC6JesVsfBVNLndM8phJZoeu4kYTQiunJSmjJJJr51Xt",
+    "mint": "EFHvHdKjjANVUjrqn7aLzfEU5jJcsWCxEMerPmYFpump",
+    "name": "SYNTHETIC TEST TOKEN",
+    "symbol": "TEST"
+  },
+  "dex": [{
+    "chainId": "solana", "dexId": "pumpswap",
+    "pairAddress": "HC6JesVsfBVNLndM8phJZoeu4kYTQiunJSmjJJJr51Xt",
+    "liquidity": {"usd": 55000}, "priceUsd": "0.0002",
+    "priceChange": {"h1": 15}, "volume": {"h1": 32000},
+    "pairCreatedAt": 1790000000000
+  }],
+  "rpc_mint": {"result":{"value":{"data":{"parsed":{"type":"mint","info":{"mintAuthority":null,"freezeAuthority":null}}}}}}
+}

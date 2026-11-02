@@ -1,0 +1,36 @@
+{
+  "data_kind": "SYNTHETIC_FIXTURE",
+  "timestamp": "2026-11-01T23:00:00Z",
+  "paper_start_stack": 200,
+  "coins": [
+    {
+      "mint": "FAKE-MINT-ONE-NOT-A-REAL-ADDRESS", "name": "Fictional One", "symbol": "TEST1",
+      "liquidity_usd": 60000, "top10_pct": 16, "h1_change_pct": 18,
+      "age_min": 34, "is_copycat": false, "mint_revoked": true, "freeze_revoked": true,
+      "dev_pct": 1, "dev_sold": false, "lp_locked_pct": 100,
+      "liquidity_declined_over_50pct": false, "bundled_largest": 2, "max_delegate_holders": 0,
+      "volume_h1": 30000, "buys_h1": 180, "price_change_m5_pct": -7,
+      "buys_m5": 31, "sells_m5": 25, "price_usd": 0.001,
+      "fictional_future_observations": [
+        {"minutes_later": 15, "price_usd": 0.00112, "liquidity_usd": 60000},
+        {"minutes_later": 40, "price_usd": 0.0009, "liquidity_usd": 48000}
+      ]
+    },
+    {
+      "mint": "FAKE-MINT-TWO-NOT-A-REAL-ADDRESS", "name": "Fictional Two", "symbol": "TEST2",
+      "liquidity_usd": 70000, "top10_pct": 14, "h1_change_pct": 8,
+      "age_min": 30, "is_copycat": false, "mint_revoked": true, "freeze_revoked": false,
+      "dev_pct": 2, "dev_sold": false, "lp_locked_pct": 100,
+      "liquidity_declined_over_50pct": false, "bundled_largest": 1, "max_delegate_holders": 0,
+      "volume_h1": 29000, "buys_h1": 160, "price_change_m5_pct": -6,
+      "buys_m5": 31, "sells_m5": 25, "price_usd": 0.001,
+      "fictional_future_observations": []
+    },
+    {
+      "mint": "FAKE-MINT-THREE-NOT-A-REAL-ADDRESS", "name": "Fictional Three", "symbol": "TEST3",
+      "liquidity_usd": 20000, "top10_pct": 5, "h1_change_pct": 7,
+      "age_min": 30, "is_copycat": false,
+      "fictional_future_observations": []
+    }
+  ]
+}

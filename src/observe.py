@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from src.stream_evidence import StreamEvidence
+
 DEX = "https://api.dexscreener.com/tokens/v1/solana"
 RUG = "https://api.rugcheck.xyz/v1/tokens"
 RPC = "https://api.mainnet-beta.solana.com"
@@ -52,7 +54,11 @@ def numeric(x: Any) -> float | None:
 
 
 def migration_from_event(raw: Any) -> dict | None:
-    """Return only explicitly named migrate events; don't treat pool creation as migration."""
+    """Legacy, UNVALIDATED contract; a match is not independent migration proof.
+
+    Keep this fixture-tested assumption until provider docs and captured frames
+    establish the real subscription and schema. Never infer from pool creation.
+    """
     if not isinstance(raw, dict) or raw.get("action") != "migrate":
         return None
     mint = raw.get("mint")
@@ -63,7 +69,8 @@ def migration_from_event(raw: Any) -> dict | None:
             "signature": raw.get("signature") if isinstance(raw.get("signature"), str) else None,
             "name": raw.get("name") if isinstance(raw.get("name"), str) else None,
             "symbol": raw.get("symbol") if isinstance(raw.get("symbol"), str) else None,
-            "observed_at": utcnow(), "source": "pumpapi_stream"}
+            "observed_at": utcnow(), "source": "pumpapi_stream",
+            "schema_status": "UNVALIDATED", "independent_migration_proof": "UNKNOWN"}
 
 
 @dataclass
@@ -73,6 +80,12 @@ class ObservationConfig:
     max_events: int = 15000
     request_timeout_s: int = 12
     rpc_url: str = RPC
+
+    def validate_capture(self):
+        for name, maximum in (("duration_s", 180), ("max_events", 15000), ("max_migrations", 10)):
+            value = getattr(self, name)
+            if type(value) is not int or not 1 <= value <= maximum:
+                raise ValueError(f"{name} must be an integer from 1 to {maximum}")
 
 
 def save_raw(out: Path, source: str, mint: str, payload: Any) -> str:
@@ -200,7 +213,8 @@ def audit_layers(authorities: dict, summary: dict, rug: Any, rpc_supply: Any,
 
 
 def research_verdict(layers: list[dict]):
-    return "UNVERIFIED_DO_NOT_TRADE" if any(x["status"] != "PASS" for x in layers) else "REVIEW_REQUIRED"
+    # Layer checks cannot establish a migration or certify a token as safe.
+    return "UNVERIFIED_DO_NOT_TRADE"
 
 
 def evaluate_mint(migration: dict, raw_migration: Any, out: Path, db,
@@ -209,7 +223,7 @@ def evaluate_mint(migration: dict, raw_migration: Any, out: Path, db,
     mint = migration["mint"]
     path = save_raw(out, "migration", mint, raw_migration)
     record_source(db, mint, "migration", path)
-    record_decision(db, mint, "Scanner", "OBSERVED_MIGRATION", migration)
+    record_decision(db, mint, "Scanner", "UNVERIFIED_MIGRATION_CLAIM", migration)
 
     pairs, status, err = get_json(session, f"{DEX}/{mint}", cfg.request_timeout_s)
     path = save_raw(out, "dex", mint, pairs if err is None else {"error":err,"http_status":status})
@@ -240,39 +254,71 @@ def evaluate_mint(migration: dict, raw_migration: Any, out: Path, db,
 
 
 async def capture_migrations(cfg: ObservationConfig, out: Path) -> tuple[list[tuple[dict,dict]], dict]:
-    """Single free third-party WebSocket; bounded runtime/events; ignores all trades."""
+    """One bounded connection, no subscription guesses, no retries or trading.
+
+    `migrations` counts legacy parser matches, never independently proven events.
+    Every frame contributes to diagnostics, even when the parser rejects it.
+    """
     import websockets
+    cfg.validate_capture()
     out.mkdir(parents=True, exist_ok=True)
     migrations: list[tuple[dict,dict]] = []
     seen: set[str] = set()
     count = 0
-    status = {"connected":False, "events_seen":0, "migrations":0, "reason":None, "stream":STREAM}
-    deadline = time.monotonic() + max(1, min(int(cfg.duration_s), 180))
+    status = {"connected":False, "events_seen":0, "migrations":0, "reason":None, "stream":STREAM,
+              "schema_status": "UNVALIDATED", "independent_migration_proof": "UNKNOWN",
+              "error": None}
+    evidence = StreamEvidence(STREAM, utcnow())
+    deadline = time.monotonic() + cfg.duration_s
     try:
-        async with websockets.connect(STREAM, open_timeout=12, close_timeout=5,
-                                      max_size=1_500_000, ping_interval=20) as ws:
-            status["connected"] = True
-            while time.monotonic() < deadline and count < cfg.max_events and len(migrations) < cfg.max_migrations:
-                remaining = deadline - time.monotonic()
-                try:
-                    msg = await asyncio.wait_for(ws.recv(), timeout=min(5, max(0.2, remaining)))
-                except asyncio.TimeoutError:
-                    continue
-                count += 1
-                try:
-                    data = json.loads(msg)
-                except (ValueError, TypeError):
-                    continue
-                migration = migration_from_event(data)
-                if migration and migration["mint"] not in seen:
-                    seen.add(migration["mint"])
-                    migrations.append((migration, data))
-            status["reason"] = ("sample_goal" if len(migrations) == cfg.max_migrations else
-                                "event_limit" if count >= cfg.max_events else "time_limit")
+        async with asyncio.timeout(cfg.duration_s):
+            async with websockets.connect(STREAM, open_timeout=min(12, cfg.duration_s), close_timeout=1,
+                                          max_size=1_500_000, max_queue=16, ping_interval=20) as ws:
+                status["connected"] = True
+                while count < cfg.max_events and len(migrations) < cfg.max_migrations:
+                    msg = await asyncio.wait_for(ws.recv(), timeout=max(0.001, deadline - time.monotonic()))
+                    count += 1
+                    data = None
+                    migration = None
+                    try:
+                        data = json.loads(msg)
+                    except (ValueError, TypeError, RecursionError):
+                        outcome = "invalid_json"
+                    else:
+                        migration = migration_from_event(data)
+                        if not isinstance(data, dict):
+                            outcome = "non_object"
+                        elif data.get("action") != "migrate":
+                            outcome = "not_legacy_migrate_action"
+                        elif migration is None:
+                            outcome = "invalid_mint"
+                        elif migration["mint"] in seen:
+                            outcome = "duplicate_mint"
+                        else:
+                            outcome = "legacy_parser_match_unvalidated"
+                            seen.add(migration["mint"])
+                            migrations.append((migration, data))
+                    evidence.observe(msg, data, outcome, utcnow())
+                status["reason"] = ("sample_goal" if len(migrations) == cfg.max_migrations else "event_limit")
+    except TimeoutError:
+        status["reason"] = "time_limit" if status["connected"] else "stream_error"
+        if not status["connected"]:
+            status["error"] = {"category": "connection_timeout", "exception_type": "TimeoutError"}
     except Exception as exc:
-        status["reason"] = f"stream unavailable: {type(exc).__name__}: {str(exc)[:160]}"
+        # Never persist exception text: it may contain URLs, headers or credentials.
+        response = getattr(exc, "response", None)
+        code = getattr(response, "status_code", None) or getattr(exc, "status_code", None)
+        category = ("http_rejected" if isinstance(code, int) else
+                    "connection_closed" if isinstance(exc, websockets.exceptions.ConnectionClosed) else
+                    "transport_error")
+        status["reason"] = "stream_error"
+        status["error"] = {"category": category, "exception_type": type(exc).__name__,
+                           "http_status": code if isinstance(code, int) else None}
     status["events_seen"] = count
     status["migrations"] = len(migrations)
+    status["legacy_parser_matches"] = len(migrations)
+    status["parser_outcomes"] = dict(evidence.outcomes)
+    status["evidence"] = evidence.write(out, utcnow(), status)
     return migrations, status
 
 

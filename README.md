@@ -36,6 +36,40 @@ The final command accesses public network endpoints and should only be run with 
 
 See the Codex engineering brief supplied by ORBIT. Implement via a reviewable branch/PR; do not merge or spend without founder authorization.
 
+### Assignment 001 diagnostics
+
+```sh
+python run_live.py --capture-only --seconds 10 --events 100 --limit 1 --output output/investigation-001
+```
+
+This mode contacts only the original WebSocket, sends no subscription guesses,
+and performs no DexScreener, RugCheck or RPC evaluation. It makes one connection
+attempt with no automatic retry. A stream error exits with code 2; a completed
+bounded observation exits with code 0, which does **not** establish a migration.
+
+Each run writes a unique `stream_evidence_*.json` plus `run_summary.json` in the
+chosen output directory. Use a new output directory to retain each run summary.
+Diagnostics cap samples at 20, two per top-level shape, with a 32 KiB compact
+serialized sample budget and 64 buckets per histogram (including overflow).
+Whole evidence files also contain bounded histograms and metadata. Messages
+remain capped at 1.5 MB, runs at 180 seconds / 15,000 frames / 10 unique legacy
+parser matches. Limits must be positive integers within those bounds.
+
+Samples retain top-level key/type shapes, public address/signature fields, and
+plausible timestamp probe values verbatim. Other values are redacted; unknown
+event-type strings are hashed. These probes do not define provider schemas or
+timestamp units. Original frame hashes and sanitized file hashes are separate;
+the original frames are not retained and cannot be reconstructed from hashes.
+Wire ping/pong control frames handled by the WebSocket library are not counted
+as received application messages. Nested values are redacted, not unpacked.
+
+The existing `action == "migrate"` predicate is unchanged and explicitly
+**UNVALIDATED**. `migrations` is retained for compatibility and means unique
+legacy parser matches, also exposed as `legacy_parser_matches`; it never means
+independently verified migrations. All evaluated candidates remain
+`UNVERIFIED_DO_NOT_TRADE`. See [the engineering report](docs/assignment-001-report.md)
+for actual access evidence, mock-test results and remaining blockers.
+
 ## Safety and limits
 
 No live orders, wallet keys, transaction signing, FOMO signup, referral dependency, trading advice, paid API, or automated trading. Synthetic paper results are *not* a backtest or evidence of profitability. Partial token-security observations are not a safety certification. Any missing evidence blocks clearance. Never commit credentials or licensed/raw personal data.

@@ -1,0 +1,30 @@
+{
+  "data_kind": "DOCS_EXAMPLE_NOT_LIVE_EVIDENCE",
+  "evidence_classification": "PROVIDER_DOCUMENTATION_EXAMPLE_NOT_LIVE_EVIDENCE",
+  "provenance": {
+    "documentation_url": "https://pumpapi.io/stream",
+    "retrieved_on_as_reported_by_orbit": "2026-11-02",
+    "supplied_by": "ORBIT via founder's ENG-002 Provider Documentation Evidence message",
+    "excerpt_abbreviated": true,
+    "included_field_values_preserved": true,
+    "omitted_fields": "Additional balances and token metadata omitted by ORBIT",
+    "codex_direct_page_retrieval": false,
+    "original_page_sha256": null,
+    "live_capture": false,
+    "independent_onchain_verification": "UNKNOWN",
+    "timestamp_units": "UNKNOWN; preserve original numeric value without inferring units"
+  },
+  "migration": {
+    "signature": "VX8dW9sTNqnoQJGLMibC86pUdrd1R4TwSPFibX6bCDrmKw9N25aUHN1d2yd9iq26qJS2hGG4YzqStxSQ2AujbAA",
+    "action": "migrate",
+    "poolId": "HC6JesVsfBVNLndM8phJZoeu4kYTQiunJSmjJJJr51Xt",
+    "mint": "EFHvHdKjjANVUjrqn7aLzfEU5jJcsWCxEMerPmYFpump",
+    "quoteMint": "So11111111111111111111111111111111111111112",
+    "pool": "pump-amm",
+    "poolCreatedBy": "pump",
+    "burnedLiquidity": "100%",
+    "tokenProgram": "spl-token-2022",
+    "block": 462541749,
+    "timestamp": 1793204432648
+  }
+}

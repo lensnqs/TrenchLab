@@ -1,0 +1,34 @@
+{
+  "data_kind": "DOCUMENTATION_DERIVED_SCHEMA_REPORTED_BY_ORBIT",
+  "provenance": {
+    "documentation_url": "https://pumpapi.io/stream",
+    "provider": "PumpApi (not PumpPortal)",
+    "reported_by": "ORBIT via founder's ENG-002 assignment",
+    "reported_on": "2026-11-02",
+    "codex_direct_retrieval": "BLOCKED_PROXY_CONNECT_HTTP_403",
+    "verbatim_documentation_example": false,
+    "identifier_values": "SYNTHETIC_TEST_IDENTIFIERS; not copied from provider documentation or live frames",
+    "live_capture": false,
+    "independent_onchain_verification": "UNKNOWN",
+    "derivation": "Only the action=migrate and top-level mint, poolId, signature structure comes from ORBIT's documentation findings. All identifier values below are synthetic substitutions. No other event fields, timestamps or heartbeat schemas are inferred."
+  },
+  "reported_connection_contract": {
+    "stream": "wss://stream.pumpapi.io/",
+    "feed": "all-events",
+    "application_subscription_messages": 0
+  },
+  "migration_claims": [
+    {
+      "action": "migrate",
+      "mint": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "poolId": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+      "signature": "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC"
+    },
+    {
+      "action": "migrate",
+      "mint": "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+      "poolId": "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+      "signature": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    }
+  ]
+}
